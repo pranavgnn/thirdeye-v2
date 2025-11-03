@@ -49,6 +49,9 @@ async function databaseNode(
     return {};
   }
 
+  const CONFIDENCE_THRESHOLD = 0.7;
+  const shouldEscalate = state.analyzerOutput.confidenceLevel < CONFIDENCE_THRESHOLD;
+
   const violation = await db.insert(
     `INSERT INTO violation_reports 
       (violationType, description, vehicleNumber, severity, status, aiAssessmentScore, recommendedFineAmount, notes)
@@ -59,7 +62,7 @@ async function databaseNode(
       state.analyzerOutput.description,
       state.analyzerOutput.vehicleNumber || null,
       state.analyzerOutput.confidenceLevel > 0.8 ? "high" : "medium",
-      "pending_review",
+      shouldEscalate ? "escalated" : "pending_review",
       state.analyzerOutput.confidenceLevel,
       state.vectorSearchResults.length > 0
         ? state.vectorSearchResults[0].similarityScore * 5000
@@ -67,9 +70,23 @@ async function databaseNode(
       JSON.stringify({
         analyzedAt: new Date().toISOString(),
         rulesApplied: state.vectorSearchResults.map((r) => r.ruleId),
+        escalatedDueToLowConfidence: shouldEscalate,
       }),
     ]
   );
+
+  if (violation?.id && shouldEscalate) {
+    await db.insert(
+      `INSERT INTO escalations (violationId, escalationReason, escalationLevel, priority)
+       VALUES ($1, $2, $3, $4)`,
+      [
+        violation.id,
+        `Low confidence AI assessment (${(state.analyzerOutput.confidenceLevel * 100).toFixed(1)}%). Flagged for admin review.`,
+        1,
+        "high",
+      ]
+    );
+  }
 
   return {
     reportId: violation?.id || null,
@@ -138,9 +155,6 @@ export async function* streamViolationAnalysis(
       const eventType = event.event;
       const nodeName = event.metadata?.langgraph_node || "";
 
-      console.log(`[Chain] Event: ${eventType}, Node: ${nodeName}`);
-
-      // Emit tool call events
       if (eventType === "on_tool_start" || eventType === "on_tool_end") {
         const toolName = event.name || "tool";
         const streamEvent: ChainStreamEvent = {
@@ -152,12 +166,10 @@ export async function* streamViolationAnalysis(
               : `${toolName} completed`,
           timestamp: Date.now(),
         };
-        console.log(`[Chain] Emitting ${toolName} ${eventType}`);
         if (onEvent) onEvent(streamEvent);
         yield streamEvent;
       }
 
-      // Only emit node_start once per node
       if (
         eventType === "on_chain_start" &&
         nodeName &&
@@ -171,12 +183,10 @@ export async function* streamViolationAnalysis(
           data: nodeNames[nodeName] || `Executing ${nodeName}`,
           timestamp: Date.now(),
         };
-        console.log(`[Chain] Emitting node_start for ${nodeName}`);
         if (onEvent) onEvent(streamEvent);
         yield streamEvent;
       }
 
-      // Only emit node_end once per node
       if (
         eventType === "on_chain_end" &&
         nodeName &&
@@ -190,14 +200,11 @@ export async function* streamViolationAnalysis(
           data: `Completed ${nodeName}`,
           timestamp: Date.now(),
         };
-        console.log(`[Chain] Emitting node_end for ${nodeName}`);
         if (onEvent) onEvent(streamEvent);
         yield streamEvent;
       }
 
-      // Emit final result when chain completes
       if (eventType === "on_chain_end" && (nodeName === "chain" || nodeName === "")) {
-        // Only emit final_result once
         if (!emittedNodes.has("final_result")) {
           emittedNodes.add("final_result");
           const streamEvent: ChainStreamEvent = {
@@ -205,21 +212,9 @@ export async function* streamViolationAnalysis(
             data: event.data,
             timestamp: Date.now(),
           };
-          console.log(
-            `[Chain] Emitting final_result:`,
-            JSON.stringify(streamEvent).slice(0, 200)
-          );
           if (onEvent) onEvent(streamEvent);
           yield streamEvent;
         }
-      }
-
-      // Debug: log all on_chain_end events to see what we're missing
-      if (eventType === "on_chain_end") {
-        console.log(
-          `[Chain] on_chain_end event - nodeName: "${nodeName}", event.data keys:`,
-          Object.keys(event.data || {})
-        );
       }
     }
   } catch (error) {

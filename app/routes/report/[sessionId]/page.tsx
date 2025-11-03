@@ -48,7 +48,6 @@ export default function SessionPage() {
 
         const data = await response.json();
 
-        // Parse JSON strings if they exist
         if (typeof data.progress_data === "string") {
           data.progress_data = JSON.parse(data.progress_data);
         }
@@ -97,7 +96,6 @@ export default function SessionPage() {
   const isComplete = session.status === "complete";
   const isFailed = session.status === "failed";
 
-  // Extract formatted analysis from result
   const getFormattedAnalysis = () => {
     if (!session.result) return null;
     const output = session.result.output || session.result;

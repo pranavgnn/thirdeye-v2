@@ -27,16 +27,13 @@ export async function action({ request }: Route.ActionArgs) {
     const readable = new ReadableStream({
         async start(controller) {
             try {
-                console.log("[API] Starting violation analysis...");
                 const events: any[] = [];
 
                 for await (const event of streamViolationAnalysis(base64)) {
-                    console.log("[API] Emitting event:", event.type);
                     events.push(event);
                     const data = JSON.stringify(event);
                     controller.enqueue(encoder.encode(`data: ${data}\n\n`));
 
-                    // Update session progress
                     if (sessionId) {
                         try {
                             await db.query(
@@ -51,7 +48,6 @@ export async function action({ request }: Route.ActionArgs) {
                     }
                 }
 
-                // Mark as complete
                 if (sessionId) {
                     const finalEvent = events[events.length - 1];
                     const result = finalEvent?.type === "final_result" ? finalEvent.data : null;
@@ -64,12 +60,10 @@ export async function action({ request }: Route.ActionArgs) {
                     );
                 }
 
-                console.log("[API] Analysis complete, closing stream");
                 controller.close();
             } catch (error) {
                 console.error("[API] Stream error:", error);
 
-                // Mark session as failed
                 if (sessionId) {
                     try {
                         await db.query(

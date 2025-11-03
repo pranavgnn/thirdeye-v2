@@ -10,8 +10,6 @@ const __dirname = dirname(__filename);
 config({ path: join(__dirname, "..", ".env") });
 
 async function seedMotorVehicleActEmbeddings() {
-  console.log("Starting embeddings seed...");
-
   const embeddings = new GoogleGenerativeAIEmbeddings({
     model: "text-embedding-004",
   });
@@ -31,11 +29,8 @@ async function seedMotorVehicleActEmbeddings() {
         embedding = $5::vector, updated_at = CURRENT_TIMESTAMP`,
       [rule.ruleId, rule.ruleTitle, rule.ruleText, rule.section, formattedEmbedding]
     );
-
-    console.log(`Embedded rule: ${rule.ruleId}`);
   }
 
-  console.log("Embeddings seed completed!");
   await db.closePool();
 }
 

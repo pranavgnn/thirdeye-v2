@@ -84,3 +84,4 @@ Instructions for GitHub Copilot:
 - Write clean, readable, and self-documenting code - which means you will not add comments unless absolutely necessary.
 - Assume the dev server is always running. You do not have to worry about starting the dev server, building the project, or restarting the server.
 - Use ~ for imports from the root `app` directory, avoid relative imports as much as possible.
+- Do NOT create documentation markdown files, or random files like scripts, bash, shell commands, etc. that you will use only once or twice.
