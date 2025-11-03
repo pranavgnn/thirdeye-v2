@@ -1,16 +1,14 @@
 import { useState } from "react";
-import { useFetcher } from "react-router";
+import { useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { FileUpload } from "./components/file-upload";
-import { action } from "./action";
-
-export { action };
 
 export default function ReportPage() {
-  const fetcher = useFetcher();
+  const navigate = useNavigate();
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isValid, setIsValid] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleImageUpload = (file: File) => {
     setSelectedImage(file);
@@ -31,18 +29,40 @@ export default function ReportPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedImage) return;
+    if (!selectedImage || !imagePreview) return;
+
+    setIsLoading(true);
 
     const formData = new FormData();
     formData.append("file", selectedImage);
 
-    fetcher.submit(formData, {
-      method: "POST",
-      action: "/report",
-      encType: "multipart/form-data",
-    });
+    try {
+      // Create session first
+      const sessionRes = await fetch("/api/v1/violations/sessions", {
+        method: "POST",
+      });
 
-    handleImageRemove();
+      if (!sessionRes.ok) {
+        throw new Error("Failed to create analysis session");
+      }
+
+      const session = await sessionRes.json();
+      const sessionId = session.id;
+
+      // Navigate to session page
+      navigate(`/report/${sessionId}`);
+
+      // Start analysis in background without waiting
+      fetch(`/api/v1/violations/analyze?sessionId=${sessionId}`, {
+        method: "POST",
+        body: formData,
+      }).catch((error) => {
+        console.error("Error during analysis:", error);
+      });
+    } catch (error) {
+      console.error("Error:", error);
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -74,12 +94,8 @@ export default function ReportPage() {
             </div>
 
             <div className="flex justify-center">
-              <Button
-                type="submit"
-                disabled={!isValid || fetcher.state !== "idle"}
-                size="lg"
-              >
-                {fetcher.state !== "idle" ? "Uploading..." : "Report"}
+              <Button type="submit" disabled={!isValid || isLoading} size="lg">
+                {isLoading ? "Uploading..." : "Report"}
               </Button>
             </div>
           </form>

@@ -31,6 +31,8 @@
 
 import { Pool, type QueryResult, type QueryResultRow } from "pg";
 
+let pool: Pool;
+
 const getDatabaseUrl = (): string => {
   const user = process.env.POSTGRES_USER;
   const password = process.env.POSTGRES_PASSWORD;
@@ -44,19 +46,25 @@ const getDatabaseUrl = (): string => {
     );
   }
 
-  return `postgresql://${user}:${password}@${host}:${port}/${db}`;
+  const encodedPassword = encodeURIComponent(password);
+  return `postgresql://${user}:${encodedPassword}@${host}:${port}/${db}`;
 };
 
-const pool = new Pool({
-  connectionString: getDatabaseUrl(),
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
+const getPool = (): Pool => {
+  if (!pool) {
+    pool = new Pool({
+      connectionString: getDatabaseUrl(),
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    });
 
-pool.on("error", (err) => {
-  console.error("Unexpected error on idle client", err);
-});
+    pool.on("error", (err) => {
+      console.error("Unexpected error on idle client", err);
+    });
+  }
+  return pool;
+};
 
 /**
  * Executes a raw SQL query with parameterized values.
@@ -84,7 +92,7 @@ export async function query<T extends QueryResultRow = any>(
   values?: any[]
 ): Promise<QueryResult<T>> {
   try {
-    const result = await pool.query<T>(text, values);
+    const result = await getPool().query<T>(text, values);
     return result;
   } catch (error) {
     console.error("Database query error:", error);
@@ -368,9 +376,7 @@ export async function closePool(): Promise<void> {
  * }
  * ```
  */
-export function getPool(): Pool {
-  return pool;
-}
+export { getPool };
 
 export default {
   query,
