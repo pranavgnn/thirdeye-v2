@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "react-router-docs": {
+      "url": "https://gitmcp.io/remix-run/react-router",
+      "type": "http"
+    },
+    "shadcn-mcp": {
+      "url": "https://www.shadcn.io/api/mcp",
+      "type": "http"
+    }
+  }
+}
