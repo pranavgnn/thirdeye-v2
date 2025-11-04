@@ -32,6 +32,10 @@ export const VectorSearchResultSchema = z.object({
   ruleTitle: z.string().describe("Title of the rule"),
   ruleText: z.string().describe("Full text of the rule"),
   section: z.string().describe("Section number in Motor Vehicle Act"),
+  category: z.string().describe("Category of violation"),
+  fineAmountRupees: z
+    .number()
+    .describe("Fine amount in rupees for this violation"),
   similarityScore: z
     .number()
     .min(0)

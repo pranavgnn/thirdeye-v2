@@ -1,22 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { Button } from "~/components/ui/button";
-import { LogOut, AlertTriangle, Check, Clock } from "lucide-react";
-
-interface AdminUser {
-  id: string;
-  email: string;
-  fullName: string;
-}
+import { AdminLayout } from "../components/layout";
+import { AlertTriangle, Check, Clock } from "lucide-react";
 
 interface EscalatedViolation {
   id: string;
-  vehicleNumber: string;
+  vehicle_number: string;
   description: string;
   severity: string;
-  aiAssessmentScore: number;
-  createdAt: string;
-  escalationReason: string;
+  ai_assessment_score: number;
+  created_at: string;
+  escalation_reason: string;
 }
 
 interface DashboardStats {
@@ -27,7 +21,6 @@ interface DashboardStats {
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
-  const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [escalatedViolations, setEscalatedViolations] = useState<
     EscalatedViolation[]
   >([]);
@@ -47,9 +40,6 @@ export default function AdminDashboardPage() {
           navigate("/admin/login");
           return;
         }
-
-        const adminData = await adminResponse.json();
-        setAdmin(adminData.admin);
 
         const violationsResponse = await fetch("/api/v1/violations/escalated");
         if (violationsResponse.ok) {
@@ -82,75 +72,32 @@ export default function AdminDashboardPage() {
     loadDashboardData();
   }, [navigate]);
 
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/v1/admin/logout", { method: "POST" });
-    } catch (err) {
-      console.error("Logout error:", err);
-    }
-    navigate("/admin/login");
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-8">
-        <div className="max-w-6xl mx-auto">
-          <p className="text-foreground/60">Loading dashboard...</p>
+      <AdminLayout>
+        <div className="text-center py-12">
+          <div className="w-8 h-8 border-2 border-border border-t-foreground rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground mt-4">Loading dashboard...</p>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background p-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded text-destructive">
-            {error}
-          </div>
-          <Button onClick={() => navigate("/admin/login")} className="mt-4">
-            Return to Login
-          </Button>
+      <AdminLayout>
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded text-destructive">
+          {error}
         </div>
-      </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-        <div className="max-w-6xl mx-auto px-8 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              ThirdEye Admin
-            </h1>
-            <p className="text-sm text-foreground/60">Dashboard</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-medium text-foreground">
-                {admin?.fullName}
-              </p>
-              <p className="text-xs text-foreground/60">{admin?.email}</p>
-            </div>
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              size="sm"
-              className="gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              Logout
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-8 py-8">
+    <AdminLayout>
+      <div className="space-y-8">
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-6 border border-border rounded-lg bg-card">
             <div className="flex items-center justify-between">
               <div>
@@ -196,7 +143,7 @@ export default function AdminDashboardPage() {
         <div className="border border-border rounded-lg overflow-hidden">
           <div className="p-6 border-b border-border bg-card">
             <h2 className="text-lg font-semibold text-foreground">
-              Escalated Violations
+              Recent Escalations
             </h2>
           </div>
 
@@ -239,7 +186,7 @@ export default function AdminDashboardPage() {
                       className="border-b border-border hover:bg-muted/50 transition-colors"
                     >
                       <td className="px-6 py-4 text-sm font-mono text-foreground">
-                        {violation.vehicleNumber || "N/A"}
+                        {violation.vehicle_number || "N/A"}
                       </td>
                       <td className="px-6 py-4 text-sm text-foreground/80">
                         {violation.description}
@@ -247,12 +194,12 @@ export default function AdminDashboardPage() {
                       <td className="px-6 py-4 text-sm">
                         <span
                           className={`px-2 py-1 rounded text-xs font-medium ${
-                            violation.aiAssessmentScore > 0.7
+                            violation.ai_assessment_score > 0.7
                               ? "bg-green-500/20 text-green-700 dark:text-green-400"
                               : "bg-red-500/20 text-red-700 dark:text-red-400"
                           }`}
                         >
-                          {(violation.aiAssessmentScore * 100).toFixed(1)}%
+                          {(violation.ai_assessment_score * 100).toFixed(1)}%
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm">
@@ -269,10 +216,10 @@ export default function AdminDashboardPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-foreground/70 max-w-xs truncate">
-                        {violation.escalationReason}
+                        {violation.escalation_reason}
                       </td>
                       <td className="px-6 py-4 text-sm text-foreground/60">
-                        {new Date(violation.createdAt).toLocaleDateString()}
+                        {new Date(violation.created_at).toLocaleDateString()}
                       </td>
                     </tr>
                   ))}
@@ -281,7 +228,7 @@ export default function AdminDashboardPage() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }

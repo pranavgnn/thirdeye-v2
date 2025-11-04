@@ -13,7 +13,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 
   try {
     const result = await db.getOne(
-      `SELECT id, status, progress_data, result, error, createdAt, updatedAt
+      `SELECT id, status, progress_data, result, error, image_data, created_at, updated_at
        FROM violation_analysis_sessions
        WHERE id = $1`,
       [sessionId]

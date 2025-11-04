@@ -1,13 +1,9 @@
 import { config } from "dotenv";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
 import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import * as db from "../app/lib/database.js";
 import { MOTOR_VEHICLE_ACT_RULES } from "../database/seeds/motor-vehicle-act-rules.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-config({ path: join(__dirname, "..", ".env") });
+config();
 
 async function seedMotorVehicleActEmbeddings() {
   const embeddings = new GoogleGenerativeAIEmbeddings({
@@ -23,11 +19,22 @@ async function seedMotorVehicleActEmbeddings() {
 
     await db.insert(
       `INSERT INTO motor_vehicle_act_rules 
-        (rule_id, rule_title, rule_text, section, embedding)
-      VALUES ($1, $2, $3, $4, $5::vector)
+        (rule_id, rule_title, rule_text, section, category, fine_amount_rupees, embedding)
+      VALUES ($1, $2, $3, $4, $5, $6, $7::vector)
       ON CONFLICT (rule_id) DO UPDATE SET 
-        embedding = $5::vector, updated_at = CURRENT_TIMESTAMP`,
-      [rule.ruleId, rule.ruleTitle, rule.ruleText, rule.section, formattedEmbedding]
+        embedding = $7::vector, 
+        category = $5,
+        fine_amount_rupees = $6,
+        updated_at = CURRENT_TIMESTAMP`,
+      [
+        rule.ruleId,
+        rule.ruleTitle,
+        rule.ruleText,
+        rule.section,
+        rule.category,
+        rule.fineAmountRupees,
+        formattedEmbedding
+      ]
     );
   }
 

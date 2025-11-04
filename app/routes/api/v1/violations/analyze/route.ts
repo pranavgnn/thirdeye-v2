@@ -23,6 +23,20 @@ export async function action({ request }: Route.ActionArgs) {
     const buffer = await file.arrayBuffer();
     const base64 = Buffer.from(buffer).toString("base64");
 
+    // Store the image data in the session
+    if (sessionId) {
+        try {
+            await db.query(
+                `UPDATE violation_analysis_sessions 
+                 SET image_data = $1, updated_at = CURRENT_TIMESTAMP
+                 WHERE id = $2`,
+                [base64, sessionId]
+            );
+        } catch (dbError) {
+            console.error("[API] Failed to store image:", dbError);
+        }
+    }
+
     const encoder = new TextEncoder();
     const readable = new ReadableStream({
         async start(controller) {
@@ -38,7 +52,7 @@ export async function action({ request }: Route.ActionArgs) {
                         try {
                             await db.query(
                                 `UPDATE violation_analysis_sessions 
-                                 SET progress_data = $1, updatedAt = CURRENT_TIMESTAMP
+                                 SET progress_data = $1, updated_at = CURRENT_TIMESTAMP
                                  WHERE id = $2`,
                                 [JSON.stringify(events), sessionId]
                             );
@@ -54,7 +68,7 @@ export async function action({ request }: Route.ActionArgs) {
 
                     await db.query(
                         `UPDATE violation_analysis_sessions 
-                         SET status = $1, result = $2, updatedAt = CURRENT_TIMESTAMP
+                         SET status = $1, result = $2, updated_at = CURRENT_TIMESTAMP
                          WHERE id = $3`,
                         ["complete", result ? JSON.stringify(result) : null, sessionId]
                     );
@@ -68,7 +82,7 @@ export async function action({ request }: Route.ActionArgs) {
                     try {
                         await db.query(
                             `UPDATE violation_analysis_sessions 
-                             SET status = $1, error = $2, updatedAt = CURRENT_TIMESTAMP
+                             SET status = $1, error = $2, updated_at = CURRENT_TIMESTAMP
                              WHERE id = $3`,
                             ["failed", error instanceof Error ? error.message : String(error), sessionId]
                         );

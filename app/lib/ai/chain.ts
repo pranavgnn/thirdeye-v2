@@ -50,26 +50,63 @@ async function databaseNode(
   }
 
   const CONFIDENCE_THRESHOLD = 0.7;
+  const SIMILARITY_THRESHOLD = 0.75;
   const shouldEscalate = state.analyzerOutput.confidenceLevel < CONFIDENCE_THRESHOLD;
+
+  // Normalize violation type to match database enum
+  const violationTypeMapping: Record<string, string> = {
+    speeding: "speeding",
+    "rash_driving": "rash_driving",
+    "wrong_parking": "wrong_parking",
+    "red_light": "red_light",
+    "helmet_violation": "helmet_violation",
+    "not_wearing_helmet": "helmet_violation",
+    "seatbelt_violation": "seatbelt_violation",
+    "not_wearing_seatbelt": "seatbelt_violation",
+    "phone_usage": "phone_usage",
+    "no_license_plate": "no_license_plate",
+    other: "other",
+  };
+
+  const rawViolationType = state.analyzerOutput.violationTypes
+    .split(",")[0]
+    .trim()
+    .toLowerCase()
+    .replace(/ /g, "_");
+
+  const violationType = violationTypeMapping[rawViolationType] || "other";
+
+  // Calculate total fines from rules with >75% similarity
+  const matchedRules = state.vectorSearchResults.filter(
+    (r) => r.similarityScore >= SIMILARITY_THRESHOLD
+  );
+  const totalFineAmount = matchedRules.reduce(
+    (sum, rule) => sum + rule.fineAmountRupees,
+    0
+  );
 
   const violation = await db.insert(
     `INSERT INTO violation_reports 
-      (violationType, description, vehicleNumber, severity, status, aiAssessmentScore, recommendedFineAmount, notes)
+      (violation_type, description, vehicle_number, severity, status, ai_assessment_score, recommended_fine_amount, notes)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING id`,
     [
-      state.analyzerOutput.violationTypes.split(",")[0],
+      violationType,
       state.analyzerOutput.description,
       state.analyzerOutput.vehicleNumber || null,
       state.analyzerOutput.confidenceLevel > 0.8 ? "high" : "medium",
       shouldEscalate ? "escalated" : "pending_review",
       state.analyzerOutput.confidenceLevel,
-      state.vectorSearchResults.length > 0
-        ? state.vectorSearchResults[0].similarityScore * 5000
-        : 2000,
+      totalFineAmount > 0 ? totalFineAmount : 2000,
       JSON.stringify({
         analyzedAt: new Date().toISOString(),
-        rulesApplied: state.vectorSearchResults.map((r) => r.ruleId),
+        rulesApplied: state.vectorSearchResults.map((r) => ({
+          ruleId: r.ruleId,
+          similarity: r.similarityScore,
+          fineAmount: r.fineAmountRupees,
+        })),
+        matchedRules: matchedRules.length,
+        totalMatchedFine: totalFineAmount,
         escalatedDueToLowConfidence: shouldEscalate,
       }),
     ]
@@ -77,7 +114,7 @@ async function databaseNode(
 
   if (violation?.id && shouldEscalate) {
     await db.insert(
-      `INSERT INTO escalations (violationId, escalationReason, escalationLevel, priority)
+      `INSERT INTO escalations (violation_id, escalation_reason, escalation_level, priority)
        VALUES ($1, $2, $3, $4)`,
       [
         violation.id,
@@ -149,6 +186,7 @@ export async function* streamViolationAnalysis(
 
     const emittedNodes = new Set<string>();
 
+    // Stream the events for progress tracking
     for await (const event of chain.streamEvents(inputState, {
       version: "v2",
     })) {
@@ -203,20 +241,19 @@ export async function* streamViolationAnalysis(
         if (onEvent) onEvent(streamEvent);
         yield streamEvent;
       }
-
-      if (eventType === "on_chain_end" && (nodeName === "chain" || nodeName === "")) {
-        if (!emittedNodes.has("final_result")) {
-          emittedNodes.add("final_result");
-          const streamEvent: ChainStreamEvent = {
-            type: "final_result",
-            data: event.data,
-            timestamp: Date.now(),
-          };
-          if (onEvent) onEvent(streamEvent);
-          yield streamEvent;
-        }
-      }
     }
+
+    // After streaming events, invoke the chain to get the complete final state
+    const finalState = await chain.invoke(inputState);
+
+    const streamEvent: ChainStreamEvent = {
+      type: "final_result",
+      data: finalState,
+      timestamp: Date.now(),
+    };
+    if (onEvent) onEvent(streamEvent);
+    yield streamEvent;
+
   } catch (error) {
     console.error("[Chain] Error during streaming:", error);
     const streamEvent: ChainStreamEvent = {

@@ -1,35 +1,35 @@
 CREATE TABLE IF NOT EXISTS admin_users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email VARCHAR(255) UNIQUE NOT NULL,
-  passwordHash VARCHAR(255) NOT NULL,
-  fullName VARCHAR(255) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  full_name VARCHAR(255) NOT NULL,
   role VARCHAR(50) DEFAULT 'reviewer',
-  isActive BOOLEAN DEFAULT true,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS admin_sessions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  adminId UUID NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
-  jwtToken TEXT NOT NULL,
-  ipAddress VARCHAR(45),
-  userAgent TEXT,
-  expiresAt TIMESTAMP NOT NULL,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  admin_id UUID NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+  jwt_token TEXT NOT NULL,
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_admin_sessions_admin_id ON admin_sessions(adminId);
-CREATE INDEX idx_admin_sessions_expires_at ON admin_sessions(expiresAt);
+CREATE INDEX idx_admin_sessions_admin_id ON admin_sessions(admin_id);
+CREATE INDEX idx_admin_sessions_expires_at ON admin_sessions(expires_at);
 
 CREATE TABLE IF NOT EXISTS reporters (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email VARCHAR(255) UNIQUE,
-  phoneNumber VARCHAR(20) UNIQUE,
-  fullName VARCHAR(255),
-  licenseNumber VARCHAR(100),
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  phone_number VARCHAR(20) UNIQUE,
+  full_name VARCHAR(255),
+  license_number VARCHAR(100),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_reporters_email ON reporters(email);
-CREATE INDEX idx_reporters_phone ON reporters(phoneNumber);
+CREATE INDEX idx_reporters_phone ON reporters(phone_number);

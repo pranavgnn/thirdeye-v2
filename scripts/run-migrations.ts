@@ -1,7 +1,9 @@
 import * as fs from "fs";
 import * as path from "path";
-import "dotenv/config";
+import { config } from "dotenv";
 import * as db from "~/lib/database";
+
+config();
 
 async function runMigrations() {
     const migrationsDir = path.join(process.cwd(), "database", "migrations");

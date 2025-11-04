@@ -18,9 +18,9 @@ export interface AdminSession {
 export interface AdminUser {
     id: string;
     email: string;
-    fullName: string;
+    full_name: string;
     role: string;
-    isActive: boolean;
+    is_active: boolean;
 }
 
 export async function createSession(
@@ -34,12 +34,12 @@ export async function createSession(
         .setExpirationTime(Math.floor(expiresAt.getTime() / 1000))
         .sign(SECRET);
 
-    await db.query("DELETE FROM admin_sessions WHERE adminId = $1", [adminId]);
+    await db.query("DELETE FROM admin_sessions WHERE admin_id = $1", [adminId]);
 
     const result = await db.insert(
-        `INSERT INTO admin_sessions (adminId, jwtToken, ipAddress, userAgent, expiresAt)
+        `INSERT INTO admin_sessions (admin_id, jwt_token, ip_address, user_agent, expires_at)
      VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, adminId, jwtToken as token, EXTRACT(EPOCH FROM expiresAt) * 1000 as expiresAt`,
+     RETURNING id, admin_id, jwt_token as token, EXTRACT(EPOCH FROM expires_at) * 1000 as expiresAt`,
         [adminId, token, ipAddress, userAgent, expiresAt]
     );
 
@@ -58,7 +58,7 @@ export async function verifySession(token: string): Promise<AdminUser | null> {
 
         const session = await db.getOne<{ id: string }>(
             `SELECT id FROM admin_sessions 
-       WHERE adminId = $1 AND jwtToken = $2 AND expiresAt > CURRENT_TIMESTAMP`,
+       WHERE admin_id = $1 AND jwt_token = $2 AND expires_at > CURRENT_TIMESTAMP`,
             [adminId, token]
         );
 
@@ -67,8 +67,8 @@ export async function verifySession(token: string): Promise<AdminUser | null> {
         }
 
         const admin = await db.getOne<AdminUser>(
-            `SELECT id, email, fullName, role, isActive FROM admin_users 
-       WHERE id = $1 AND isActive = true`,
+            `SELECT id, email, full_name, role, is_active FROM admin_users 
+       WHERE id = $1 AND is_active = true`,
             [adminId]
         );
 
@@ -84,7 +84,7 @@ export async function invalidateSession(token: string): Promise<void> {
         const adminId = payload.adminId as string;
 
         await db.query(
-            "DELETE FROM admin_sessions WHERE adminId = $1 AND jwtToken = $2",
+            "DELETE FROM admin_sessions WHERE admin_id = $1 AND jwt_token = $2",
             [adminId, token]
         );
     } catch {

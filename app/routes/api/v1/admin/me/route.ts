@@ -30,7 +30,7 @@ export async function loader({ request }: any) {
                 admin: {
                     id: admin.id,
                     email: admin.email,
-                    fullName: admin.fullName,
+                    fullName: admin.full_name,
                     role: admin.role,
                 },
             }),

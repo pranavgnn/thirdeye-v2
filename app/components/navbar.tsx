@@ -68,6 +68,12 @@ export function Navbar() {
                     <span className="text-sm text-foreground/70">
                       {adminName}
                     </span>
+                    <Link
+                      to="/admin/dashboard"
+                      className="px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+                    >
+                      Admin Dashboard
+                    </Link>
                     <Button
                       onClick={handleLogout}
                       variant="destructive"

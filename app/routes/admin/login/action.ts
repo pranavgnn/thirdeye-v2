@@ -1,6 +1,7 @@
 import * as db from "~/lib/database";
 import { verifyPassword } from "~/lib/auth/password";
 import { createSession } from "~/lib/auth/session";
+import { logAuditEvent } from "~/lib/audit";
 import { redirect } from "react-router";
 
 export async function action({ request }: any) {
@@ -23,11 +24,11 @@ export async function action({ request }: any) {
         const admin = await db.getOne<{
             id: string;
             email: string;
-            fullname: string;
-            passwordhash: string;
-            isactive: boolean;
+            full_name: string;
+            password_hash: string;
+            is_active: boolean;
         }>(
-            `SELECT id, email, fullName, passwordHash, isActive FROM admin_users WHERE email = $1`,
+            `SELECT id, email, full_name, password_hash, is_active FROM admin_users WHERE email = $1`,
             [email]
         );
 
@@ -38,14 +39,14 @@ export async function action({ request }: any) {
             };
         }
 
-        if (!admin.isactive) {
+        if (!admin.is_active) {
             return {
                 error: "This account has been disabled",
                 email,
             };
         }
 
-        const passwordValid = await verifyPassword(password, admin.passwordhash);
+        const passwordValid = await verifyPassword(password, admin.password_hash);
         if (!passwordValid) {
             return {
                 error: "Invalid credentials",
@@ -60,6 +61,14 @@ export async function action({ request }: any) {
         const userAgent = request.headers.get("user-agent") || "Unknown";
 
         const session = await createSession(admin.id, ipAddress, userAgent);
+
+        await logAuditEvent({
+            action: "admin_login",
+            entityType: "admin_session",
+            entityId: session.id,
+            userId: admin.id,
+            changes: { ip_address: ipAddress },
+        });
 
         const response = redirect("/admin/dashboard", {
             headers: {

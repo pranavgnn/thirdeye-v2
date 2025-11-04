@@ -4,9 +4,10 @@ CREATE TABLE IF NOT EXISTS violation_analysis_sessions (
   progress_data JSONB DEFAULT '[]',
   result JSONB,
   error TEXT,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  image_data TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_sessions_status ON violation_analysis_sessions(status);
-CREATE INDEX idx_sessions_created_at ON violation_analysis_sessions(createdAt DESC);
+CREATE INDEX idx_sessions_created_at ON violation_analysis_sessions(created_at DESC);

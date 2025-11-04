@@ -27,6 +27,8 @@ export async function vectorSearchNode(
       rule_title,
       rule_text,
       section,
+      category,
+      fine_amount_rupees,
       1 - (embedding <=> $1::vector) as similarity_score
     FROM motor_vehicle_act_rules
     WHERE 1 - (embedding <=> $1::vector) > 0.3
@@ -39,6 +41,8 @@ export async function vectorSearchNode(
     rule_title: string;
     rule_text: string;
     section: string;
+    category: string;
+    fine_amount_rupees: number;
     similarity_score: number;
   }>(query, [formattedEmbedding]);
 
@@ -47,6 +51,8 @@ export async function vectorSearchNode(
     ruleTitle: r.rule_title,
     ruleText: r.rule_text,
     section: r.section,
+    category: r.category,
+    fineAmountRupees: r.fine_amount_rupees,
     similarityScore: r.similarity_score,
   }));
 

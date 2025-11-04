@@ -27,16 +27,16 @@ export async function loader({ request }: any) {
         const violations = await db.getMany(
             `SELECT 
         vr.id,
-        vr.vehicleNumber,
+        vr.vehicle_number,
         vr.description,
         vr.severity,
-        vr.aiAssessmentScore,
-        vr.createdAt,
-        e.escalationReason
+        vr.ai_assessment_score,
+        vr.created_at,
+        e.escalation_reason
       FROM violation_reports vr
-      LEFT JOIN escalations e ON vr.id = e.violationId
+      LEFT JOIN escalations e ON vr.id = e.violation_id
       WHERE vr.status = 'escalated'
-      ORDER BY vr.createdAt DESC
+      ORDER BY vr.created_at DESC
       LIMIT 100`
         );
 
@@ -45,12 +45,12 @@ export async function loader({ request }: any) {
                 ok: true,
                 violations: violations.map((v: any) => ({
                     id: v.id,
-                    vehicleNumber: v.vehiclenumber,
+                    vehicleNumber: v.vehicle_number,
                     description: v.description,
                     severity: v.severity,
-                    aiAssessmentScore: parseFloat(v.aiassessmentscore) || 0,
-                    createdAt: v.createdat,
-                    escalationReason: v.escalationreason,
+                    aiAssessmentScore: parseFloat(v.ai_assessment_score) || 0,
+                    createdAt: v.created_at,
+                    escalationReason: v.escalation_reason,
                 })),
             }),
             {

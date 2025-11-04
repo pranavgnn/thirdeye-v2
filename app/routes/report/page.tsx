@@ -33,10 +33,8 @@ export default function ReportPage() {
 
     setIsLoading(true);
 
-    const formData = new FormData();
-    formData.append("file", selectedImage);
-
     try {
+      // Create session first
       const sessionRes = await fetch("/api/v1/violations/sessions", {
         method: "POST",
       });
@@ -48,7 +46,12 @@ export default function ReportPage() {
       const session = await sessionRes.json();
       const sessionId = session.id;
 
-      navigate(`/report/${sessionId}`);
+      // Navigate to the session page
+      navigate(`/report/session/${sessionId}`);
+
+      // Then start the analysis in the background
+      const formData = new FormData();
+      formData.append("file", selectedImage);
 
       fetch(`/api/v1/violations/analyze?sessionId=${sessionId}`, {
         method: "POST",
